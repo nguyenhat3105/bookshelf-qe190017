@@ -60,6 +60,24 @@ Rules tests run against a local demo Firestore Emulator with Java installed.
 They exercise ownership, unauthenticated access, forged user IDs, invalid field
 writes, canonical identity, missing-document transaction reads, and renames.
 
+The Windows test runner keeps Java's local socket files in `.sockets/` to avoid
+temp-directory redirection issues in packaged desktop hosts.
+
+## Android device evidence
+
+Connect an unlocked Android phone with USB debugging enabled, then run
+`flutter devices`. The integration driver captures real device screenshots:
+
+```text
+flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart --dart-define=TEST_EMAIL=<dedicated-test-email> --dart-define=TEST_PASSWORD=<dedicated-test-password> -d <device-id>
+```
+
+Use the dedicated grader account seeded with five books. The test creates a
+fresh second account for Register and empty-state evidence, then signs into the
+grader account. It adds one disposable verification book, edits it, exercises
+filters and favorites, and deletes that verification book. Screenshots are
+saved to `artifacts/screenshots/`. Credentials are not included in the repo.
+
 Do not put grader passwords in this public repository. The private submission
 Word document contains the test account credentials.
 

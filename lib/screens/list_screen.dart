@@ -65,7 +65,14 @@ class _ListScreenState extends State<ListScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('List'),
+      toolbarHeight: 76,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('List'),
+          Text(widget.user.email ?? '', style: const TextStyle(fontSize: 12)),
+        ],
+      ),
       actions: [
         TextButton(
           onPressed: loggingOut ? null : logout,
@@ -94,7 +101,7 @@ class _ListScreenState extends State<ListScreen> {
               Card(
                 child: ExpansionTile(
                   title: const Text('Add a book'),
-                  initiallyExpanded: true,
+                  initiallyExpanded: false,
                   childrenPadding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                   children: [
                     BookForm(

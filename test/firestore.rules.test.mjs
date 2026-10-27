@@ -71,3 +71,20 @@ test('Canonical title changes require atomic move; conflicting edit is detectabl
   }));
   await assertFails(updateDoc(ref(database, next), {createdAt:Timestamp.now()}));
 });
+test('Optional rating and notes may be absent; unicode and slashes remain valid', async () => {
+  const d = data({title:'Sách / Science', author:'Nguyễn Công Nhất'});
+  delete d.rating; delete d.notes;
+  await assertSucceeds(setDoc(ref(db(uid), d), d));
+});
+test('Concurrent duplicate transactions create only one book', async () => {
+  const database = db(uid), d = data();
+  const create = () => runTransaction(database, async tx => {
+    const existing = await tx.get(ref(database, d));
+    if (existing.exists()) throw new Error('duplicate');
+    tx.set(ref(database, d), d);
+  });
+  const results = await Promise.allSettled([create(), create()]);
+  if (results.filter(r => r.status === 'fulfilled').length !== 1) throw new Error('Expected one successful create');
+  const books = await getDocs(query(collection(database,'books'),where('userId','==',uid)));
+  if (books.size !== 1) throw new Error('Expected exactly one book');
+});
