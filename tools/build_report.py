@@ -13,6 +13,7 @@ items = [
     ('firebase-auth', 'Firebase console — Authentication', 'The Users list includes the dedicated grader account.'),
     ('firebase-data', 'Firebase console — Firestore data', 'The books collection contains five sample books belonging to the grader account.'),
     ('firebase-rules', 'Firebase console — Security Rules', 'The published rules restrict access by owner and validate canonical book IDs and field values.'),
+    ('01-home', 'Home screen', 'The public Home screen shows BookShelf, Login, Register and the feature cards.'),
     ('02-register-validation', 'Register screen — validation', 'Submitting the empty registration form shows the required-field messages.'),
     ('03-register-success', 'Register screen — success', 'A real Firebase account was created and Registration successful is displayed.'),
     ('05-login', 'Login screen', 'The empty sign-in form.'),

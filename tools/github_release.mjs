@@ -41,7 +41,8 @@ if (process.argv.includes('--download')) {
   console.log('Release APK downloaded for device verification.');
 } else if (process.argv.includes('--publish')) {
   if (!release || !release.assets.some(asset => asset.name === 'app-release.apk')) throw new Error('Upload a tested APK before publishing.');
-  release = await api(`/releases/${release.id}`, {method:'PATCH', body:JSON.stringify({draft:false})});
+  release = await api(`/releases/${release.id}`, {method:'PATCH', body:JSON.stringify({draft:false, target_commitish:'main',
+    body:'BookShelf Android release for PRM393 — QE190017 Nguyễn Công Nhất.\n\nThe release APK was installed and opened on a physical Android 14 phone. Firebase Email/Password Authentication and private Firestore storage are configured. The application workflows were verified with real-device integration tests.\n\nInstall app-release.apk. Grader account credentials are supplied privately in the submission report.'})});
   console.log(`Published release: ${release.html_url}`);
 } else {
   const apk = resolve('build/app/outputs/flutter-apk/app-release.apk');
