@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // One canonical book per owner + case-insensitive title + author.
+    function signedIn() { return request.auth != null; }
+    function canonical(d) {
+      return d.userId + '_' + hashing.sha256(d.title.trim().lower()).toHexString().lower()
+        + '_' + hashing.sha256(d.author.trim().lower()).toHexString().lower();
+    }
+    function valid(d, id) {
+      return d.keys().hasAll(['id','userId','title','author','genre','status','favorite','createdAt'])
+        && d.keys().hasOnly(['id','userId','title','author','genre','status','rating','favorite','notes','createdAt'])
+        && d.userId is string && d.userId == request.auth.uid
+        && d.title is string && d.title.trim().size() > 0 && d.title.size() <= 100
+        && d.author is string && d.author.trim().size() > 0 && d.author.size() <= 60
+        && d.id == id && id == canonical(d)
+        && d.genre in ['Fiction','Non-Fiction','Academic','Other']
+        && d.status in ['To Read','Reading','Finished']
+        && (d.get('rating', null) == null || (d.rating is int && d.rating >= 0 && d.rating <= 5))
+        && d.favorite is bool
+        && d.get('notes', '') is string && d.get('notes', '').size() <= 300
+        && d.createdAt is timestamp;
+    }
+    match /books/{bookId} {
+      allow get: if signedIn() && (
+        (resource != null && resource.data.userId == request.auth.uid)
+        || (resource == null && bookId.matches(request.auth.uid + '_[a-f0-9]{64}_[a-f0-9]{64}'))
+      );
+      allow list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && valid(request.resource.data, bookId);
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && valid(request.resource.data, bookId)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
