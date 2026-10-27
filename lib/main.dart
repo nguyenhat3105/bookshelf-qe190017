@@ -1,11 +1,13 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import 'app.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized().ensureSemantics();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  if (kIsWeb) binding.ensureSemantics();
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,

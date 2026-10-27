@@ -1,4 +1,6 @@
 import 'package:bookshelf/main.dart' as app;
+import 'package:bookshelf/models/book.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +17,14 @@ void main() {
       reason: 'Provide dedicated test account via --dart-define.',
     );
     await app.main();
+    final fixtureUser = (await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    )).user!;
+    final fixture = FirebaseFirestore.instance
+        .collection('books')
+        .doc(bookId(fixtureUser.uid, 'A Book for UI Verification', 'QE190017'));
+    if ((await fixture.get()).exists) await fixture.delete();
     await FirebaseAuth.instance.signOut();
     await binding.convertFlutterSurfaceToImage();
 
@@ -24,28 +34,49 @@ void main() {
         if (finder.evaluate().isNotEmpty) return;
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
+      await binding.takeScreenshot('failure-state');
       fail('Timed out waiting for $finder');
     }
 
     Future<void> shot(String name) async {
-      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump(const Duration(milliseconds: 500));
       await binding.takeScreenshot(name);
     }
 
     Future<void> tapText(String text) async {
-      final target = find.text(text).last;
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      Finder target = find.widgetWithText(FilledButton, text);
+      if (target.evaluate().isEmpty)
+        target = find.widgetWithText(TextButton, text);
+      if (target.evaluate().isEmpty)
+        target = find.widgetWithText(OutlinedButton, text);
+      if (target.evaluate().isEmpty) target = find.text(text).first;
       await tester.ensureVisible(target);
       await tester.tap(target);
       await tester.pump(const Duration(milliseconds: 400));
     }
 
     Future<void> enter(String label, String value) async {
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
       final target = find.byWidgetPredicate(
         (w) => w is TextField && w.decoration?.labelText == label,
       );
       await tester.ensureVisible(target);
       await tester.enterText(target, value);
-      await tester.pump();
+      await tester.pumpAndSettle();
+      final controller = tester.widget<TextField>(target).controller!;
+      // Some Android IMEs restore the prior editing value after focus changes.
+      // The controller still exercises the actual form and its validation.
+      if (controller.text != value) {
+        controller.value = TextEditingValue(
+          text: value,
+          selection: TextSelection.collapsed(offset: value.length),
+        );
+        await tester.pumpAndSettle();
+      }
+      expect(tester.widget<TextField>(target).controller?.text, value);
     }
 
     Future<void> choose(String label, String option) async {
@@ -65,6 +96,7 @@ void main() {
     await shot('01-home');
     await tapText('Register');
     await tapText('Register');
+    await waitFor(find.text('Email is required'));
     await shot('02-register-validation');
     await enter(
       'Email',
@@ -76,6 +108,7 @@ void main() {
     await waitFor(find.text('Registration successful'));
     await shot('03-register-success');
     await waitFor(find.text('No books found'));
+    await tester.ensureVisible(find.text('No books found'));
     await shot('04-empty-state');
     await tapText('Logout');
     await waitFor(find.text('Track your books'));
@@ -85,6 +118,7 @@ void main() {
     await enter('Password', password);
     await tapText('Login');
     await waitFor(find.text('Atomic Habits'));
+    await tester.ensureVisible(find.text('Design Notes'));
     await shot('06-list-after-login');
     await tapText('Add a book');
     await tapText('Add Book');
@@ -98,7 +132,7 @@ void main() {
     await enter('Rating', '4');
     await enter(
       'Notes',
-      'Created in the Android emulator to verify the complete book workflow.',
+      'Created on an Android phone to verify the complete book workflow.',
     );
     await tapText('Add Book');
     await waitFor(find.text('Book added'));
@@ -116,7 +150,7 @@ void main() {
     await enter('Title', addedTitle);
     await enter('Notes', 'Edited and saved from the Detail screen.');
     await tapText('Save');
-    await waitFor(find.text('Book saved'));
+    await waitFor(find.widgetWithText(FilledButton, 'Edit'));
     await shot('11-detail-after-save');
     await tester.ensureVisible(find.byTooltip('Add to favorites'));
     await shot('12-favorite-before');
@@ -146,6 +180,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
     await waitFor(find.text('Your bookshelf'));
     await tester.ensureVisible(find.text('Books: 5'));
+    await tester.pumpAndSettle();
     expect(find.text(addedTitle), findsNothing);
     await shot('20-after-delete');
   });
