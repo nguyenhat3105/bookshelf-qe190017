@@ -31,7 +31,11 @@ void main() {
     Future<void> waitFor(Finder finder) async {
       for (var i = 0; i < 120; i++) {
         await tester.pump(const Duration(milliseconds: 250));
-        if (finder.evaluate().isNotEmpty) return;
+        if (finder.evaluate().any(
+          (element) => ModalRoute.of(element)?.isCurrent ?? true,
+        )) {
+          return;
+        }
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
       await binding.takeScreenshot('failure-state');
@@ -39,6 +43,8 @@ void main() {
     }
 
     Future<void> shot(String name) async {
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 500));
       await binding.takeScreenshot(name);
     }
@@ -47,10 +53,12 @@ void main() {
       FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();
       Finder target = find.widgetWithText(FilledButton, text);
-      if (target.evaluate().isEmpty)
+      if (target.evaluate().isEmpty) {
         target = find.widgetWithText(TextButton, text);
-      if (target.evaluate().isEmpty)
+      }
+      if (target.evaluate().isEmpty) {
         target = find.widgetWithText(OutlinedButton, text);
+      }
       if (target.evaluate().isEmpty) target = find.text(text).first;
       await tester.ensureVisible(target);
       await tester.tap(target);
@@ -168,6 +176,15 @@ void main() {
     await tester.pumpAndSettle();
     await shot('16-favorites-filter');
     await enter('Search', ' UI verification ');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await Scrollable.ensureVisible(
+      tester.element(
+        find.byWidgetPredicate(
+          (w) => w is TextField && w.decoration?.labelText == 'Search',
+        ),
+      ),
+    );
     await shot('17-search');
     await tapText('Clear');
     await tester.ensureVisible(find.text('Books: 6'));

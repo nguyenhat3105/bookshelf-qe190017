@@ -18,6 +18,11 @@ async function api(path, options = {}) {
   if (!response.ok) throw new Error(`GitHub ${response.status}: ${await response.text()}`);
   return response.status === 204 ? null : response.json();
 }
+if (process.argv.includes('--dispatch')) {
+  await api('/actions/workflows/android-release.yml/dispatches', {method:'POST', body:JSON.stringify({ref:'main'})});
+  console.log('Android release workflow started.');
+  process.exit(0);
+}
 if (process.argv.includes('--status')) {
   const data = await api('/actions/runs?per_page=3');
   console.log(JSON.stringify(data.workflow_runs.map(r => ({id:r.id,status:r.status,conclusion:r.conclusion,url:r.html_url})), null, 2));
